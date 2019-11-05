@@ -1,5 +1,9 @@
 import pandas as pd
+import numpy as np
 import os
+
+#自作モジュール
+import dispgraphs
 
 ###########################################################
 
@@ -297,6 +301,90 @@ def get2018method2cleanedmean_pit_ture(min_pit=200, max_pit=1000):
 
 ###########################################################
 #指定日時のデータのみ取得
+
+
+###########################################################
+# 飽和していないデータのみを算出。飽和している部分はNaNで渡す
+def get_nosaturated_df(df_method2):
+    #増加量((A - B) / Bで変化率を算出する。)
+    df_increment = df_method2.pct_change()
+    # inf を NaNに変換
+    df_increment.replace([np.inf, -np.inf], np.nan)
+
+    threshold = 0
+    # Tot(10)が50以下の時はTot(6)とTot(7)を信頼する
+    # Tot(10)が50以上の時はTot(9)とTot(10)を信頼する
+    df_bool_large_tot10 = df_increment[df_method2['hp_Tot(10)'] > 50]
+    df_large_tot10 = df_method2[df_method2['hp_Tot(10)'] > 50]
+
+    df_bool_small_tot10 = df_increment[df_method2['hp_Tot(10)'] <= 50]
+    df_small_tot10 = df_method2[df_method2['hp_Tot(10)'] <= 50]
+
+    #largeの時は判断にTot(10)とTot(9)を使う
+
+    df_bool = pd.DataFrame() #最終的に必要なデータのみをTrueとしたboolean
+
+    for i in range(len(df_bool_large_tot10)):
+        df_now = df_bool_large_tot10[i:i+1]
+        sign = float((df_now['hp_Tot(10)']+df_now['hp_Tot(9)'])/2)
+        
+        if sign > threshold:
+            #each_bool : 1 row DataFrame
+            each_bool = df_now > threshold 
+            df_bool = pd.concat([df_bool, each_bool])
+            
+        if sign <= threshold:
+            each_bool = df_now <= threshold
+            df_bool = pd.concat([df_bool, each_bool])
+            
+    for i in range(len(df_bool_small_tot10)):
+        df_now = df_bool_small_tot10[i:i+1]
+        sign = float((df_now['hp_Tot(6)']+df_now['hp_Tot(7)'])/2)
+        
+        if sign > threshold:
+            #each_bool : 1 row DataFrame
+            each_bool = df_now > threshold 
+            df_bool = pd.concat([df_bool, each_bool])
+            
+        if sign <= threshold:
+            each_bool = df_now <= threshold
+            df_bool = pd.concat([df_bool, each_bool], sort=False)
+
+    #時間通りに並び替え
+    df_bool = df_bool.sort_index()
+
+    #左からFalse, False, False...ときてTureになりまたFalseになったときのFalseはTrueに変換
+    colnames = list(df_bool.columns)
+    df_corrected = pd.DataFrame()
+    for i in range(len(df_bool)):
+        df_row = df_bool[i:i+1]
+        
+    #     now = 
+        count_true = 0
+        #一列毎に見て、Trueをみつけたらそれよりも右を全部Trueに
+        for j, colname in enumerate(colnames):
+            if df_row[colname].bool() == True:
+                #特に意味は無いが、分かりやすくここで何番目のカラムかを保持
+                j_hold = j
+                break
+                
+        #i番目よりも右側のカラム名を取得
+        true_colnames = colnames[j_hold:]
+    #     false_colnames = colnames[:i_hold-1]
+    #     df_bool_corrected = pd.concat([df_bool_corrected, df_row[true_colnames]])
+        df_corrected = df_corrected.append(df_method2[i:i+1][true_colnames], sort=False)
+
+    #グラフに表示(青：original,　オレンジ：判定後Trueのみ)
+    axes = dispgraphs.scatter_graphs(df_method2, list_y_names=names_of_center, list_x_names=['Load_Avg_difference']*10
+                             ,figsize=(3*4, 3*3), alpha=0.3)
+    dispgraphs.scatter_graphs(df_corrected, list_y_names=names_of_center, list_x_names=['Load_Avg_difference']*10
+                             ,figsize=(3*4, 3*3), alpha=0.3, overlap=True, axes=axes)
+    
+    return df_corrected
+    
+
+
+
 
 
 ###########################################################
