@@ -72,10 +72,33 @@ def get2017original(unit='m'):
 
     if unit=="m":
         df_2017[names_of_center] = df_2017[names_of_center]/length_hp_m
+        df_2017['Load_Avg_difference'] = df_2017['Load_Avg_difference']/pit_width       
+
     else:
         pass
 
     return df_2017
+
+def get2015intermittent(unit='m'):
+    """
+    2015年のデータを読み込こむ。このデータは途切れ途切れ
+    unit:mの場合、ハイドロフォンデータとピットデータを/mに変換する
+    """
+    df_2015 = pd.read_csv(data_path + 'Fukadani2015_some_events.csv',
+                          index_col='TIMESTAMP', parse_dates=True)
+
+    #ピット内の差分値をとった特徴量を増やす
+    df_2015['Load_Avg_difference'] = df_2015['Load_Avg'].diff()
+    
+    if unit=="m":
+        df_2015[names_of_center] = df_2015[names_of_center]/length_hp_m
+        df_2015['Load_Avg_difference'] = df_2015['Load_Avg_difference']/pit_width       
+
+    else:
+        pass
+
+    return df_2015
+
 
 
 def get_furui():
@@ -126,6 +149,12 @@ def get2017method2(unit="m"):
     df_2017_dia = make_dataframe_diff_of_slots(df_2017)
 
     return df_2017_dia
+
+def get2015method2(unit="m"):
+    df_2015 = get2015intermittent(unit=unit)
+    df_2015_dia = make_dataframe_diff_of_slots(df_2015)
+
+    return df_2015_dia
 
 ###########################################################
 
@@ -270,6 +299,18 @@ def get2017method2cleanedmean(meantime=30):
     return df_2017method2_mean
 
 
+def get2015mean(meantime=30):
+    df_2015 = get2015intermittent(unit="m")
+    df_2015_mean = mean_of_df(df_2015)
+    return df_2015_mean
+
+def get2015method2mean(meantime=30):
+    df_2015method2 = get2015method2(unit="m")
+    df_2015method2_mean = mean_of_df(df_2015method2)
+    return df_2015method2_mean
+
+
+
 ###########################################################
 
 def drop_untrusted_pit_data(df, min_pit, max_pit):
@@ -299,27 +340,96 @@ def get2018method2cleanedmean_pit_ture(min_pit=200, max_pit=1000):
     df_2018method2_truepit = drop_untrusted_pit_data(df_2018method2, min_pit=min_pit, max_pit= max_pit)
     return df_2018method2_truepit  
 
+def get2015mean_pit_true(min_pit=200, max_pit=1000):
+    df_2015 = get2015mean()
+    df_2015_truepit = drop_untrusted_pit_data(df_2015, min_pit=min_pit, max_pit= max_pit)
+    return df_2015_truepit
+
+def get2015method2mean_pit_true(min_pit=200, max_pit=1000):
+    df_2015method2 = get2015method2mean()
+    df_2015method2_truepit = drop_untrusted_pit_data(df_2015method2, min_pit=min_pit, max_pit= max_pit)
+    return df_2015method2_truepit
+
+###########################################################
+#2018年の綺麗な３つのデータのみ取得、リストで返す
+
+
+
+def get2018_3events_original():
+    df_2018_original = get2018original()
+    list_df2018_events = [0]*3
+
+    list_df2018_events[0] = df_2018_original['2018-04-15 0:00': '2018-04-16 0:00']
+    list_df2018_events[1] = df_2018_original['2018-09-08 0:00': '2018-09-08 8:00']
+    list_df2018_events[2] = df_2018_original['2018-09-30 21:00': '2018-10-1 6:00']
+
+    return list_df2018_events
+
+def get2018_3events_mean(meantime=30):
+    df_2018_mean = get2018cleanedmean_pit_ture()
+    list_df2018_events = [0]*3
+
+    list_df2018_events[0] = df_2018_mean['2018-04-15 0:00': '2018-04-16 0:00']
+    list_df2018_events[1] = df_2018_mean['2018-09-08 0:00': '2018-09-08 8:00']
+    list_df2018_events[2] = df_2018_mean['2018-09-30 21:00': '2018-10-1 6:00']
+
+    return list_df2018_events
+
+
+def get2018_3events_method2():
+    df_2018_method2 = get2018method2cleaned()
+    list_df2018mthod2_events = [0]*3
+
+    list_df2018mthod2_events[0] = df_2018_method2['2018-04-15 0:00': '2018-04-16 0:00']
+    list_df2018mthod2_events[1] = df_2018_method2['2018-09-08 0:00': '2018-09-08 8:00']
+    list_df2018mthod2_events[2] = df_2018_method2['2018-09-30 21:00': '2018-10-1 6:00']
+
+    return list_df2018mthod2_events
+
+def get2018_3events_method2_mean(meantime=30):
+    df_2018_method2_mean = get2018method2cleanedmean_pit_ture()
+    list_df2018mthod2_events_mean = [0]*3
+
+    list_df2018mthod2_events_mean[0] = df_2018_method2_mean['2018-04-15 0:00': '2018-04-16 0:00']
+    list_df2018mthod2_events_mean[1] = df_2018_method2_mean['2018-09-08 0:00': '2018-09-08 8:00']
+    list_df2018mthod2_events_mean[2] = df_2018_method2_mean['2018-09-30 21:00': '2018-10-1 6:00']
+
+    return list_df2018mthod2_events_mean
+
+
+###########################################################
+
 ###########################################################
 #指定日時のデータのみ取得
 
 
 ###########################################################
 # 飽和していないデータのみを算出。飽和している部分はNaNで渡す
-def get_nosaturated_df(df_method2):
+# このコードめっちゃ適当に書いて頭悪い(ちゃんと動くけど)から
+# もっとスマートにできるなら改良してほしい
+def get_nosaturated_df(df):
+    '''
+    df:method2形式のdfを。
+    
+    もし基準値がNanの場合は、その時間のデータ全て使わない
+    '''
     #増加量((A - B) / Bで変化率を算出する。)
-    df_increment = df_method2.pct_change()
+    df_increment = df.pct_change()
+
     # inf を NaNに変換
     df_increment.replace([np.inf, -np.inf], np.nan)
-
+    
     threshold = 0
+    
     # Tot(10)が50以下の時はTot(6)とTot(7)を信頼する
     # Tot(10)が50以上の時はTot(9)とTot(10)を信頼する
-    df_bool_large_tot10 = df_increment[df_method2['hp_Tot(10)'] > 50]
-    df_large_tot10 = df_method2[df_method2['hp_Tot(10)'] > 50]
 
-    df_bool_small_tot10 = df_increment[df_method2['hp_Tot(10)'] <= 50]
-    df_small_tot10 = df_method2[df_method2['hp_Tot(10)'] <= 50]
+    df_bool_large_tot10 = df_increment[df['hp_Tot(10)'] > 50]
+    # df_large_tot10 = df[df['hp_Tot(10)'] > 50]
 
+    df_bool_small_tot10 = df_increment[df['hp_Tot(10)'] <= 50]
+    # df_small_tot10 = df[df['hp_Tot(10)'] <= 50]
+    
     #largeの時は判断にTot(10)とTot(9)を使う
 
     df_bool = pd.DataFrame() #最終的に必要なデータのみをTrueとしたboolean
@@ -327,55 +437,62 @@ def get_nosaturated_df(df_method2):
     for i in range(len(df_bool_large_tot10)):
         df_now = df_bool_large_tot10[i:i+1]
         sign = float((df_now['hp_Tot(10)']+df_now['hp_Tot(9)'])/2)
-        
+
         if sign > threshold:
             #each_bool : 1 row DataFrame
             each_bool = df_now > threshold 
             df_bool = pd.concat([df_bool, each_bool])
-            
+
         if sign <= threshold:
             each_bool = df_now <= threshold
             df_bool = pd.concat([df_bool, each_bool])
-            
+
     for i in range(len(df_bool_small_tot10)):
         df_now = df_bool_small_tot10[i:i+1]
         sign = float((df_now['hp_Tot(6)']+df_now['hp_Tot(7)'])/2)
-        
+
         if sign > threshold:
             #each_bool : 1 row DataFrame
-            each_bool = df_now > threshold 
+            each_bool = df_now > threshold
             df_bool = pd.concat([df_bool, each_bool])
-            
-        if sign <= threshold:
+
+        elif sign <= threshold:
             each_bool = df_now <= threshold
             df_bool = pd.concat([df_bool, each_bool], sort=False)
 
+        else: #sign = nanの時は全てFalse
+            df_now.loc[:,:] = [False]*len(df_now.columns)
+            df_bool = pd.concat([df_bool, df_now[:]], sort=False)
+
     #時間通りに並び替え
     df_bool = df_bool.sort_index()
-
+    # print(df_bool)
     #左からFalse, False, False...ときてTureになりまたFalseになったときのFalseはTrueに変換
+    #(つまり、低倍率/7~10チャンネルは常時Trueにする)
     colnames = list(df_bool.columns)
     df_corrected = pd.DataFrame()
     for i in range(len(df_bool)):
         df_row = df_bool[i:i+1]
-        
+
     #     now = 
-        count_true = 0
+        # count_true = 0
+        j_hold = 0
         #一列毎に見て、Trueをみつけたらそれよりも右を全部Trueに
         for j, colname in enumerate(colnames):
-            if df_row[colname].bool() == True:
+            if bool(df_row[colname][0]):
                 #特に意味は無いが、分かりやすくここで何番目のカラムかを保持
                 j_hold = j
                 break
-                
+
         #i番目よりも右側のカラム名を取得
         true_colnames = colnames[j_hold:]
-    #     false_colnames = colnames[:i_hold-1]
-    #     df_bool_corrected = pd.concat([df_bool_corrected, df_row[true_colnames]])
-        df_corrected = df_corrected.append(df_method2[i:i+1][true_colnames], sort=False)
+        #i番目よりも右側のカラムを全てTrueに
+        df_row.loc[:,j_hold:] = [True]*len(true_colnames)
+        df_corrected = df_corrected.append(df[i:i+1][df_row[:]], sort=False)
+
 
     #グラフに表示(青：original,　オレンジ：判定後Trueのみ)
-    axes = dispgraphs.scatter_graphs(df_method2, list_y_names=names_of_center, list_x_names=['Load_Avg_difference']*10
+    axes = dispgraphs.scatter_graphs(df, list_y_names=names_of_center, list_x_names=['Load_Avg_difference']*10
                              ,figsize=(3*4, 3*3), alpha=0.3)
     dispgraphs.scatter_graphs(df_corrected, list_y_names=names_of_center, list_x_names=['Load_Avg_difference']*10
                              ,figsize=(3*4, 3*3), alpha=0.3, overlap=True, axes=axes)
@@ -388,3 +505,8 @@ def get_nosaturated_df(df_method2):
 
 
 ###########################################################
+
+
+if __name__ == "__main__":
+    df_2018 = get2018cleanedmean_pit_ture()
+    df2018_corrected = get_nosaturated_df(df_2018)
