@@ -7,7 +7,7 @@ import dispgraphs
 
 ###########################################################
 
-length_hp_m = 0.275 # ピット直上ハイドロフォン長さ
+length_hp_m = 0.3 # ピット直上ハイドロフォン長さ
 length_C_m = 0.5 # 5本の真ん中ハイドロフォン長さ
 pit_width = 0.2 #ピット流入口長さ
 
@@ -23,7 +23,9 @@ names_of_L = ['L'+ s for s in suffix] # 左ハイドロフォン
 names_of_VR = ['VR'+ s for s in suffix] # 右鉛直ハイドロフォン
 names_of_VL = ['VL'+ s for s in suffix] # 左鉛直ハイドロフォン
 
-data_path = os.getcwd()[:-len('notebook')] + 'data\\'
+# data_path = os.getcwd()[:-len('notebook')] + 'data\\'
+data_path = os.path.abspath(__file__)[:-len('my_module/getdfs.py')] + 'data\\'
+
 
 ###########################################################
 
@@ -72,7 +74,7 @@ def get2017original(unit='m'):
 
     if unit=="m":
         df_2017[names_of_center] = df_2017[names_of_center]/length_hp_m
-        df_2017['Load_Avg_difference'] = df_2017['Load_Avg_difference']/pit_width       
+        df_2017['Load_Avg_difference'] = df_2017['Load_Avg_difference']/pit_width   
 
     else:
         pass
@@ -98,9 +100,7 @@ def get2015intermittent(unit='m'):
         pass
 
     return df_2015
-
-
-
+    
 def get_furui():
     df_furui= pd.read_csv(data_path + 'furui_results.csv', index_col='TIMESTAMP', parse_dates=True)
     return df_furui
@@ -133,6 +133,10 @@ def make_dataframe_diff_of_slots(df):
     #'WL_FMR_Avg'と'WaterLevel(cm)'は違う計測器で水深を測っているよう（要確認）で、
     #scatter graphで見ると値が１：１になった。そのため、'WL_FMR_Avg'を使っている。
     df_dia_all['WaterLevel(cm)'] = df['WL_FMR_Avg']
+
+    df_dia_all['Velocity(m/s)'] = df['vel_P_Tot']
+    print("I used the 'vel_P_Tot' data as velocity. I'm not pretty sure if it's the surface vel or mean vel. You have to make sure what this vel means. You also have to know that from 2018 data, there's another velocity data called 'Velocity(m/s). You might wanna know what's the difference between these 2.")
+
 
     return df_dia_all
 
@@ -229,6 +233,16 @@ def clean2017data(df_2017):
             
     sidxs.append("2017-8-19 0:00")
     eidxs.append('2017-08-20 0:00')
+
+    #エラーが多い時期を削除(Load_Avg_differenceがジグザグなところ)
+
+
+    sidxs.append("2016-10-31 0:00")
+    eidxs.append('2016-12-30 0:00')
+
+    sidxs.append("2017-08-25 0:00")
+    eidxs.append('2017-09-21 0:00')
+
 
     sidxs.append(df_2017.index[0])
     eidxs.append("2016-06-3 0:00")
@@ -353,8 +367,6 @@ def get2015method2mean_pit_true(min_pit=200, max_pit=1000):
 ###########################################################
 #2018年の綺麗な３つのデータのみ取得、リストで返す
 
-
-
 def get2018_3events_original():
     df_2018_original = get2018original()
     list_df2018_events = [0]*3
@@ -393,9 +405,66 @@ def get2018_3events_method2_mean(meantime=30):
     list_df2018mthod2_events_mean[0] = df_2018_method2_mean['2018-04-15 0:00': '2018-04-16 0:00']
     list_df2018mthod2_events_mean[1] = df_2018_method2_mean['2018-09-08 0:00': '2018-09-08 8:00']
     list_df2018mthod2_events_mean[2] = df_2018_method2_mean['2018-09-30 21:00': '2018-10-1 6:00']
+    
 
     return list_df2018mthod2_events_mean
 
+###########################################################
+#2017年の綺麗なデータのみ取得、リストで返す
+
+start_time_2017 = ["2016-06-25 0:00", '2016-07-05 0:00', '2016-07-31 0:00', '2016-08-08 0:00', '2016-10-03 0:00', '2017-07-01 0:00', '2017-07-10 0:00', '2017-09-22 0:00']
+end_time_2017 = ["2016-06-25 12:00", '2016-07-16 0:00', '2016-08-3 0:00', '2016-09-01 0:00', '2016-10-31 0:00', '2017-07-02 18:00', '2017-08-15 0:00', '2017-9-28 0:00']
+
+# ["2016-06-25 0:00": "2016-06-25 12:00"]
+# ['2016-07-05 0:00': '2016-07-16 0:00']
+# ['2016-07-31 0:00': '2016-08-3 0:00']
+# ['2016-08-08 0:00': '2016-09-01 0:00']
+# ['2016-10-03 0:00': '2016-10-31 0:00'] #ピット内重量がギザギザしてる。木などがひっかかって流砂が上手く取り込めていない可能性あり
+# ['2017-07-01 0:00': '2017-07-02 18:00']
+# ['2017-07-10 0:00': '2017-08-15 0:00'] #他のイベントに比べ期間が長い
+# ['2017-09-22 0:00': '2017-9-28 0:00']
+
+def get2017_8events_original():
+    df_2017_original = get2017original()
+    num_of_events = len(start_time_2017)
+    list_df2017_events = [0]*num_of_events
+
+    for i in range(num_of_events):
+        list_df2017_events[i] = df_2017_original[start_time_2017[i]:end_time_2017[i]]
+
+    return list_df2017_events
+
+def get2017_8events_mean(meantime=30):
+    df_2017_mean = get2017cleanedmean_pit_true()
+    num_of_events = len(start_time_2017)
+    list_df2017_events = [0]*num_of_events
+
+    for i in range(num_of_events):
+        list_df2017_events[i] = df_2017_mean[start_time_2017[i]:end_time_2017[i]]
+
+    return list_df2017_events
+
+
+def get2017_8events_method2():
+    df_2017_method2 = get2017method2cleaned()
+    num_of_events = len(start_time_2017)
+    list_df2017_events = [0]*num_of_events
+
+    for i in range(num_of_events):
+        list_df2017_events[i] = df_2017_method2[start_time_2017[i]:end_time_2017[i]]
+
+
+    return list_df2017_events
+
+def get2017_8events_method2_mean(meantime=30):
+    df_2017_method2_mean = get2017method2cleanedmean_pit_true()
+    num_of_events = len(start_time_2017)
+    list_df2017_events = [0]*num_of_events
+
+    for i in range(num_of_events):
+        list_df2017_events[i] = df_2017_method2_mean[start_time_2017[i]:end_time_2017[i]]    
+
+    return list_df2017_events
 
 ###########################################################
 
@@ -498,10 +567,6 @@ def get_nosaturated_df(df):
                              ,figsize=(3*4, 3*3), alpha=0.3, overlap=True, axes=axes)
     
     return df_corrected
-    
-
-
-
 
 
 ###########################################################

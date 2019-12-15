@@ -70,7 +70,7 @@ def plot_least_squares_result(result, X_list, ax):
 
 
     xlim = ax.get_xlim()
-    ylim = ax.get_ylim()
+    # ylim = ax.get_ylim()
     x = np.arange(xlim[0], xlim[1], 0.1)
 
     #PLot#############たぶんここがおかしい
